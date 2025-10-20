@@ -4,23 +4,14 @@
 import cv2
 from cv2.typing import Prim
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
-
-
-
-
-
-
+import os
+from collections import defaultdict
 
 # -------------------------------
 # PASO 1: DETECTAR LINEAS DEL FORMULARIO
 # -------------------------------
-
-
-
-
-
-
 
 
 def detectar_lineas(img):
@@ -168,7 +159,7 @@ def contar_caracteres(celda):
     area_minima = 20
     caracteres = 0
     
-    for i in range(1, num_labels):  # Ignorar fondo (label 0)
+    for i in range(1, num_labels):
         area = stats[i, cv2.CC_STAT_AREA]
         if area > area_minima:
             caracteres += 1
@@ -176,22 +167,16 @@ def contar_caracteres(celda):
     return caracteres
 
 
+
+### debugeando encontramos que el contador de letras no detectaba correctamente los caracteres "LA" 
+
+
+
 def esta_vacia(celda):
     """
     Determina si una celda esta vacia.
     """
     return contar_caracteres(celda) == 0
-
-
-
-
-
-
-
-# -------------------------------
-# PASO 4: FUNCIONES DE VALIDACION
-# -------------------------------
-
 
 
 
@@ -260,6 +245,16 @@ def contar_palabras(celda):  ## funcion con mas problemas para encontrar . _, tu
 
 
 
+
+
+# -------------------------------
+# PASO 4: FUNCIONES DE VALIDACION
+# -------------------------------
+
+
+
+
+
 def validar_nombre_apellido(celda):
     """
     Valida Nombre y apellido:
@@ -276,7 +271,7 @@ def validar_nombre_apellido(celda):
     if  num_chars > 25:
         return False
     
-    num_palabras = encontrar_palabras(celda)
+    num_palabras = contar_palabras(celda)
     
     # Verificar rango de palabras
     if num_palabras < 2:
@@ -303,7 +298,7 @@ def validar_edad(celda):
         return False
     
     #verificar que los caracteres sean consecutivos
-    if encontrar_palabras(celda) != 1:
+    if contar_palabras(celda) != 1:
         return False
     
     return True
@@ -347,7 +342,7 @@ def validar_legajo(celda):
         return False
     
     # Para legajos, usar umbral alto para ignorar espacios pequeños
-    num_palabras = encontrar_palabras(celda, umbral_multiplicador=2.5)
+    num_palabras = contar_palabras(celda)
     
     # Verificar rango de palabras
     if num_palabras != 1:
@@ -361,21 +356,85 @@ def validar_legajo(celda):
 
 def validar_pregunta(celda_si, celda_no):
     """
-    Valida que haya exactamente UNA celda marcada (SI o NO).
-    - No pueden estar ambas marcadas
-    - No pueden estar ambas vacias
+    En cada pregunta debe haber una única celda marcada 
+    (referenciadas a las columnas de Si y No), con un único caracter. Es decir, en 
+    cada pregunta, ambas celdas no pueden estar marcadas ni ambas celdas pueden 
+    quedar vacías.
     """
-    si_marcada = not esta_vacia(celda_si)
-    no_marcada = not esta_vacia(celda_no)
-    
+    if contar_caracteres(celda_si) > 1 or contar_caracteres(celda_no) > 1:
+        return False
+
+    celda_si = not esta_vacia(celda_si)
+    celda_no = not esta_vacia(celda_no)
     # XOR: una y solo una debe estar marcada
-    return si_marcada != no_marcada
+    return celda_si != celda_no
+
+def validar_comentarios(celda):
+    """
+    Debe contener al menos una palabra y no más de 25 caracteres.
+    """
+    
+    if celda is None or celda.size == 0: 
+        return False
+    
+    num_chars = contar_caracteres(celda)
+    
+    # Verificar rango de caracteres
+    if num_chars > 25:
+        return False
+    
+    num_palabras = contar_palabras(celda)
+    
+    # Verificar rango de palabras
+    if num_palabras < 1:
+        return False
+    
+    return True
+    
+#--------------------------------------------
+# CLASIFICACION DE FORMULARIOS "A", "B" O "C"
+#--------------------------------------------
 
 
 
 
+def detectar_tipo_formulario(path_img):
+    """
+    Detecta el tipo de formulario (A, B o C) a partir del encabezado superior derecho.
+    Método simple: se recorta la zona del encabezado y se analiza su intensidad/media.
+    """
+    img = cv2.imread(path_img, cv2.IMREAD_GRAYSCALE)
+    if img is None:
+        return "Desconocido"
 
+    alto, ancho = img.shape
+    # Recorte superior derecho (ajustá estos valores según tu imagen)
+    roi = img[30:58, 557:580]
 
+    # Umbralizar para resaltar la letra
+    _, binaria = cv2.threshold(roi, 180, 255, cv2.THRESH_BINARY_INV)
+
+    # Componentes conectadas para detectar la letra
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binaria, 8, cv2.CV_32S)
+
+    if num_labels <= 1:
+        return "Desconocido"
+
+    # Tomar la componente más grande (probable letra)
+    max_idx = np.argmax(stats[1:, cv2.CC_STAT_AREA]) + 1
+    area_letra = stats[max_idx, cv2.CC_STAT_AREA]
+
+    # Clasificación por área absoluta (calibrado con datos reales)
+    # A = 142 px, B = 166 px
+    # Umbral intermedio: 154 px
+    if area_letra < 154:
+        tipo = "A"
+    elif area_letra >= 154 and area_letra < 200:
+        tipo = "B"
+    else:
+        tipo = "C"
+    
+    return tipo
 
 
 #----------------
@@ -383,37 +442,24 @@ def validar_pregunta(celda_si, celda_no):
 #----------------
 
 
+def validar_formulario(path):
+    img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+    
+    if img is None:
+        print("Error: No se pudo cargar la imagen")
+        exit()
 
+    # Detectar lineas horizontales
+    h_lines = detectar_lineas(img)
 
+    # Detectar columnas en todas las filas
+    columnas_por_fila = {}
 
+    for i in range(len(h_lines) - 1):
+        v_lines = detectar_columnas_por_fila(img, h_lines, i)
+        columnas_por_fila[i] = v_lines
 
-
-# Cargar formulario con datos
-img = cv2.imread(r'D:\FABRO\TUIA\PROCESAMIENTO DE IMAGENES\TP1\formulario_01.png', cv2.IMREAD_GRAYSCALE)
-
-if img is None:
-    print("Error: No se pudo cargar la imagen")
-    exit()
-
-print(f"Imagen cargada: {img.shape}")
-
-# Detectar lineas horizontales
-h_lines = detectar_lineas(img)
-print(h_lines)
-print(f"\nLineas horizontales detectadas: {len(h_lines)}")
-
-# Detectar columnas en todas las filas
-columnas_por_fila = {}
-
-for i in range(len(h_lines) - 1):
-    v_lines = detectar_columnas_por_fila(img, h_lines, i)
-    columnas_por_fila[i] = v_lines
-
-
-# Extraer todas las celdas en un diccionario
-
-#Probe lo de abajo manualmente y decidi hacer un diccionario para hacerlo mas legible y usable
-celdas = {
+    formulario = {
     'nombre': extraer_celda(img, h_lines, columnas_por_fila[1], 1, 1),
     'edad': extraer_celda(img, h_lines, columnas_por_fila[2], 2, 1),
     'mail': extraer_celda(img, h_lines, columnas_por_fila[3], 3, 1),
@@ -425,40 +471,291 @@ celdas = {
     'pregunta3_si': extraer_celda(img, h_lines, columnas_por_fila[8], 8, 1),
     'pregunta3_no': extraer_celda(img, h_lines, columnas_por_fila[8], 8, 2),
     'comentarios': extraer_celda(img, h_lines, columnas_por_fila[9], 9, 1),
-}
+    }
 
 
-"""
-if celda_nombre is not None:
-    num_chars = contar_caracteres(celda_nombre)
-    vacia = esta_vacia(celda_nombre)
+    convertir = lambda x: "OK" if x else "MAL"
     
-    print(f"\nCelda 'Nombre y apellido':")
-    print(f"  - Caracteres detectados: {num_chars}")
-    print(f"  - Esta vacia: {vacia}")
+    respuesta_nombre = convertir(validar_nombre_apellido(formulario['nombre']))
+    respuesta_edad = convertir(validar_edad(formulario['edad']))
+    respuesta_mail = convertir(validar_mail(formulario['mail']))
+    respuesta_legajo = convertir(validar_legajo(formulario['legajo']))
+    respuesta_pregunta1 = convertir(validar_pregunta(formulario['pregunta1_si'], formulario['pregunta1_no']))
+    respuesta_pregunta2 = convertir(validar_pregunta(formulario['pregunta2_si'], formulario['pregunta2_no']))
+    respuesta_pregunta3 = convertir(validar_pregunta(formulario['pregunta3_si'], formulario['pregunta3_no']))
+    respuesta_comentarios = convertir(validar_comentarios(formulario['comentarios']))
+
+    respuesta  = f"""
+        '> Nombre y apellido': {respuesta_nombre},
+        '> Edad': {respuesta_edad},
+        '> Mail': {respuesta_mail},
+        '> Legajo': {respuesta_legajo},
+        '> Pregunta1': {respuesta_pregunta1},
+        '> Pregunta2': {respuesta_pregunta2},
+        '> Pregunta3': {respuesta_pregunta3},
+        '> Comentarios': {respuesta_comentarios},
+        """
+    return respuesta
+
+    # Extraer todas las celdas en un diccionario
     
-    plt.figure(figsize=(10, 3))
-    plt.imshow(celda_nombre, cmap='gray')
-    plt.title(f'Celda Nombre - {num_chars} caracteres')
+
+# Cargar formulario con datos
+img1 = r'D:\FABRO\TUIA\PROCESAMIENTO DE IMAGENES\TP1\formulario_01.png'
+img2 = r'D:\FABRO\TUIA\PROCESAMIENTO DE IMAGENES\TP1\formulario_02.png'
+img3 = r'D:\FABRO\TUIA\PROCESAMIENTO DE IMAGENES\TP1\formulario_03.png'
+img4 = r'D:\FABRO\TUIA\PROCESAMIENTO DE IMAGENES\TP1\formulario_04.png'
+img5 = r'D:\FABRO\TUIA\PROCESAMIENTO DE IMAGENES\TP1\formulario_05.png'
+
+
+
+#--------------------------------------------
+# PROCESAMIENTO CICLICO Y RESUMEN FINAL
+#--------------------------------------------
+
+def procesar_formularios():
+    """
+    Procesa de forma cíclica los 5 formularios e informa resultados
+    agrupados por tipo (A, B o C).
+    """
+    # Lista de formularios
+    formularios = [
+        ('formulario_01.png', img1),
+        ('formulario_02.png', img2),
+        ('formulario_03.png', img3),
+        ('formulario_04.png', img4),
+        ('formulario_05.png', img5),
+    ]
+    
+    # Diccionario para agrupar resultados por tipo
+    resultados_por_tipo = defaultdict(list)
+    
+    print("="*70)
+    print("PROCESAMIENTO CÍCLICO DE FORMULARIOS")
+    print("="*70)
+    
+    # Procesar cada formulario
+    for nombre, path in formularios:
+        # Clasificar tipo de formulario
+        tipo = detectar_tipo_formulario(path)
+        
+        # Validar formulario
+        resultado_validacion = validar_formulario(path)
+        
+        # Guardar resultado
+        resultados_por_tipo[tipo].append({
+            'nombre': nombre,
+            'validacion': resultado_validacion
+        })
+    
+    
+    for tipo in sorted(resultados_por_tipo.keys()):
+        print(f"\n{'-'*70}")
+        print(f"# FORMULARIOS TIPO {tipo}")
+        print(f"{'-'*70}\n")
+        
+        for resultado in resultados_por_tipo[tipo]:
+            print(f"Formulario: {resultado['nombre']}")
+            print("-" * 70)
+            print(resultado['validacion'])
+            print()
+    
+    # Resumen final
+    print("="*70)
+    print("RESUMEN FINAL")
+    print("="*70)
+    for tipo in sorted(resultados_por_tipo.keys()):
+        cantidad = len(resultados_por_tipo[tipo])
+        print(f"Tipo {tipo}: {cantidad} formulario(s)")
+    print("="*70)
+
+
+#--------------------------------------------
+# GENERACION DE IMAGEN DE SALIDA
+#--------------------------------------------
+
+def generar_imagen_salida():
+    """
+    Genera una imagen con los nombres de todos los formularios
+    y un indicador visual (verde=OK, rojo=MAL).
+    """
+    formularios = [
+        ('Formulario 1', img1),
+        ('Formulario 2', img2),
+        ('Formulario 3', img3),
+        ('Formulario 4', img4),
+        ('Formulario 5', img5),
+    ]
+    
+    crops_nombres = []
+    estados = []
+    
+    # Extraer nombres y validar cada formulario
+    for nombre, path in formularios:
+        img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        h_lines = detectar_lineas(img)
+        columnas_por_fila = {}
+        
+        for i in range(len(h_lines) - 1):
+            v_lines = detectar_columnas_por_fila(img, h_lines, i)
+            columnas_por_fila[i] = v_lines
+        
+        # Extraer celda de nombre (fila 1, columna 1)
+        celda_nombre = extraer_celda(img, h_lines, columnas_por_fila[1], 1, 1)
+        
+        # Validar formulario completo
+        resultado = validar_formulario(path)
+        es_correcto = "MAL" not in resultado
+        
+        crops_nombres.append(celda_nombre)
+        estados.append(es_correcto)
+    
+    # Crear imagen de salida
+    margen = 20
+    altura_fila = 60
+    ancho_indicador = 40
+    
+    # Calcular dimensiones
+    max_ancho = max([c.shape[1] for c in crops_nombres])
+    ancho_total = margen + max_ancho + margen + ancho_indicador + margen
+    alto_total = margen + (altura_fila * len(crops_nombres)) + margen
+    
+    # Crear imagen blanca
+    imagen_salida = np.ones((alto_total, ancho_total, 3), dtype=np.uint8) * 255
+    
+    # Colocar cada nombre con su indicador
+    y_actual = margen
+    
+    for i, (crop, es_ok) in enumerate(zip(crops_nombres, estados)):
+        # Convertir crop a BGR
+        crop_bgr = cv2.cvtColor(crop, cv2.COLOR_GRAY2BGR)
+        
+        # Redimensionar si es muy alto
+        if crop.shape[0] > altura_fila - 10:
+            factor = (altura_fila - 10) / crop.shape[0]
+            nuevo_ancho = int(crop.shape[1] * factor)
+            nuevo_alto = altura_fila - 10
+            crop_bgr = cv2.resize(crop_bgr, (nuevo_ancho, nuevo_alto))
+        
+        # Pegar nombre
+        h, w = crop_bgr.shape[:2]
+        imagen_salida[y_actual:y_actual+h, margen:margen+w] = crop_bgr
+        
+        # Dibujar indicador (verde=OK, rojo=MAL)
+        x_indicador = margen + max_ancho + margen
+        color = (0, 255, 0) if es_ok else (0, 0, 255)  # Verde o Rojo
+        cv2.rectangle(imagen_salida, 
+                     (x_indicador, y_actual), 
+                     (x_indicador + ancho_indicador, y_actual + altura_fila - 10),
+                     color, -1)
+        
+        # Texto OK/MAL
+        texto = "OK" if es_ok else "MAL"
+        cv2.putText(imagen_salida, texto,
+                   (x_indicador + 5, y_actual + 25),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        
+        y_actual += altura_fila
+    
+    # Guardar imagen
+    cv2.imwrite(r'D:\FABRO\TUIA\PROCESAMIENTO DE IMAGENES\TP1\resultado_formularios.png', imagen_salida)
+    print("\n✓ Imagen de salida generada: resultado_formularios.png")
+    
+    # Mostrar
+    plt.figure(figsize=(10, 8))
+    plt.imshow(cv2.cvtColor(imagen_salida, cv2.COLOR_BGR2RGB))
+    plt.title('Resultado de Formularios')
     plt.axis('off')
+    plt.tight_layout()
     plt.show()
 
-print("\n Listo para implementar validaciones")
-print(v_lines)
 
-## PRUEBA DE VALIDACION DE NOMBRE Y APELLIDO ##
-print("\n")
-print("PRUEBA: Validacion de nombre y apellido")
-print("-----------------------------------------")
+#--------------------------------------------
+# GENERACION DE CSV
+#--------------------------------------------
 
-if validar_nombre_apellido(celda_nombre):
-    print("\nCelda 'Nombre y apellido':")
-    print("  - Validacion exitosa")
-else:
-    print("\nCelda 'Nombre y apellido':")
-    print("  - Validacion fallida")
-"""
+def generar_csv():
+    """
+    Genera un archivo CSV con los resultados de validación.
+    """
+    
+    formularios = [
+        ('01', img1),
+        ('02', img2),
+        ('03', img3),
+        ('04', img4),
+        ('05', img5),
+    ]
+    
+    resultados = []
+    
+    for id_form, path in formularios:
+        # Extraer celdas usando la misma lógica de validar_formulario
+        img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        h_lines = detectar_lineas(img)
+        columnas_por_fila = {}
+        
+        for i in range(len(h_lines) - 1):
+            v_lines = detectar_columnas_por_fila(img, h_lines, i)
+            columnas_por_fila[i] = v_lines
+        
+        formulario = {
+            'nombre': extraer_celda(img, h_lines, columnas_por_fila[1], 1, 1),
+            'edad': extraer_celda(img, h_lines, columnas_por_fila[2], 2, 1),
+            'mail': extraer_celda(img, h_lines, columnas_por_fila[3], 3, 1),
+            'legajo': extraer_celda(img, h_lines, columnas_por_fila[4], 4, 1),
+            'pregunta1_si': extraer_celda(img, h_lines, columnas_por_fila[6], 6, 1),
+            'pregunta1_no': extraer_celda(img, h_lines, columnas_por_fila[6], 6, 2),
+            'pregunta2_si': extraer_celda(img, h_lines, columnas_por_fila[7], 7, 1),
+            'pregunta2_no': extraer_celda(img, h_lines, columnas_por_fila[7], 7, 2),
+            'pregunta3_si': extraer_celda(img, h_lines, columnas_por_fila[8], 8, 1),
+            'pregunta3_no': extraer_celda(img, h_lines, columnas_por_fila[8], 8, 2),
+            'comentarios': extraer_celda(img, h_lines, columnas_por_fila[9], 9, 1),
+        }
+        
+        # Validar cada campo
+        nombre = validar_nombre_apellido(formulario['nombre'])
+        edad = validar_edad(formulario['edad'])
+        mail = validar_mail(formulario['mail'])
+        legajo = validar_legajo(formulario['legajo'])
+        pregunta1 = validar_pregunta(formulario['pregunta1_si'], formulario['pregunta1_no'])
+        pregunta2 = validar_pregunta(formulario['pregunta2_si'], formulario['pregunta2_no'])
+        pregunta3 = validar_pregunta(formulario['pregunta3_si'], formulario['pregunta3_no'])
+        comentarios = validar_comentarios(formulario['comentarios'])
+        
+
+        # Agregar fila
+        resultados.append({
+            'ID': id_form,
+            'Nombre y Apellido': 'OK' if nombre else 'MAL',
+            'Edad': 'OK' if edad else 'MAL',
+            'Mail': 'OK' if mail else 'MAL',
+            'Legajo': 'OK' if legajo else 'MAL',
+            'Pregunta1': 'OK' if pregunta1 else 'MAL',
+            'Pregunta2': 'OK' if pregunta2 else 'MAL',
+            'Pregunta3': 'OK' if pregunta3 else 'MAL',
+            'Comentarios': 'OK' if comentarios else 'MAL'
+        })
+    
+    # Crear DataFrame y guardar
+    df = pd.DataFrame(resultados)
+    df.to_csv(r'D:\FABRO\TUIA\PROCESAMIENTO DE IMAGENES\TP1\resultados_validacion.csv', index=False)
+    print("\n✓ CSV generado: resultados_validacion.csv")
+    print(df.to_string(index=False))
 
 
 
-print(contar_palabras(celdas['mail']))
+#--------------------------------------------
+# EJECUCIÓN
+#--------------------------------------------
+
+if __name__ == "__main__":
+    procesar_formularios()
+    print("\n" + "="*70)
+    print("GENERANDO IMAGEN DE SALIDA...")
+    print("="*70)
+    generar_imagen_salida()
+    print("\n" + "="*70)
+    print("GENERANDO CSV...")
+    print("="*70)
+    generar_csv()
