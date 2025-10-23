@@ -1,7 +1,6 @@
-# TP1 - Procesamiento Digital de Imágenes
+# TP1 - Procesamiento De Imágenes
 
 **Autores:** Tapia Fabrizio - Mezzano Florencia  
-**Curso:** 2025-C2  
 **Universidad:** FCEIA - TUIA
 
 ---
