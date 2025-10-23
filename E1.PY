@@ -28,7 +28,6 @@ def ecualizacion_local(img, window_size):  ####   HACER CON M X N
     
     return img_output
 
-# Cargar imagen
 img = cv2.imread(r'D:\FABRO\TUIA\PROCESAMIENTO DE IMAGENES\TP1\Imagen_con_detalles_escondidos.tif', cv2.IMREAD_GRAYSCALE)
 
 if img is None:
@@ -38,15 +37,14 @@ if img is None:
 # Aplicar ecualizacion local con ventana 51x51
 print("Procesando ecualizacion local con ventana 51x51...")
 img_eq_51 = ecualizacion_local(img, 51)
-print("Listo!")
 
-# Analisis: Influencia del tamano de ventana
+
 print("\nAnalizando diferentes tamanos de ventana...")
 window_sizes = [11, 21, 41, 101]
 results = {}
 
 for ws in window_sizes:
-    print(f"  Procesando ventana {ws}x{ws}...")
+    print(f"    Procesando ventana {ws}x{ws}...")
     results[ws] = ecualizacion_local(img, ws)
 
 # Mostrar resultados comparativos
@@ -64,7 +62,7 @@ for idx, ws in enumerate(window_sizes):
     plt.title(f'Ventana {ws}x{ws}')
     plt.axis('off')
 
-# Fila 2: Histogramas
+# Histogramas
 plt.subplot(2, 5, 6)
 plt.hist(img.ravel(), bins=256, range=(0, 256), color='gray', alpha=0.7)
 plt.title('Histograma Original')
