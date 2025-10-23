@@ -11,7 +11,7 @@
 Este trabajo práctico implementa dos ejercicios de procesamiento de imágenes:
 
 1. **Ecualización Local de Histograma** - Mejora de contraste en imágenes con detalles ocultos
-2. **Validación Automática de Formularios** - Sistema de validación de formularios escaneados mediante análisis de componentes conectadas
+2. **Validación Automática de Formularios** - Sistema de validación de formularios mediante análisis de componentes conectadas
 
 ---
 
