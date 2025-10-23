@@ -2,7 +2,7 @@
 
 **Autores:** Tapia Fabrizio - Mezzano Florencia  
 **Curso:** 2025-C2  
-**Universidad:** TUIA
+**Universidad:** FCEIA - TUIA
 
 ---
 
