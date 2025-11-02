@@ -5,6 +5,37 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
+
+# def ecualizacion_local(img, M, N):
+#     """
+#     Implementa ecualización local de histograma con ventana MxN.
+#     Parámetros:
+#     - img: imagen en escala de grises
+#     - M: alto de la ventana (impar)
+#     - N: ancho de la ventana (impar)
+#     """
+#     if M % 2 == 0:
+#         M += 1
+#     if N % 2 == 0:
+#         N += 1
+
+#     pad_y = M // 2
+#     pad_x = N // 2
+
+#     img_output = np.zeros_like(img, dtype=np.uint8)
+#     img_padded = cv2.copyMakeBorder(img, pad_y, pad_y, pad_x, pad_x, cv2.BORDER_REPLICATE)
+#     rows, cols = img.shape
+
+#     for i in range(rows):
+#         for j in range(cols):
+#             window = img_padded[i:i + M, j:j + N]
+#             window_eq = cv2.equalizeHist(window)
+#             img_output[i, j] = window_eq[pad_y, pad_x]
+    
+#     return img_output
+
+
+
 def ecualizacion_local(img, window_size):  ####   HACER CON M X N 
     """
     Implementa ecualizacion local de histograma.
@@ -28,6 +59,7 @@ def ecualizacion_local(img, window_size):  ####   HACER CON M X N
     
     return img_output
 
+
 img = cv2.imread(r'D:\FABRO\TUIA\PROCESAMIENTO DE IMAGENES\TP1\Imagen_con_detalles_escondidos.tif', cv2.IMREAD_GRAYSCALE)
 
 if img is None:
@@ -35,8 +67,34 @@ if img is None:
     exit()
 
 # Aplicar ecualizacion local con ventana 51x51
-print("Procesando ecualizacion local con ventana 51x51...")
-img_eq_51 = ecualizacion_local(img, 51)
+"""
+print("Procesando ecualizacion local con ventana 21x21...")
+img_eq_51 = ecualizacion_local(img, 31, 41)
+
+
+# Histograma e imagen ecualizada
+
+plt.figure(figsize=(12, 6))
+plt.subplot(1, 3, 2)
+plt.imshow(img_eq_51, cmap='gray')
+plt.title('Ecualizacion local con ventana 21x21')
+plt.axis('off')
+
+
+plt.subplot(1, 3, 1)
+plt.hist(img_eq_51.ravel(), bins=256, range=(0, 256), color='gray', alpha=0.7)
+plt.title('Histograma')
+plt.xlabel('Intensidad')
+plt.ylabel('Frecuencia')
+
+plt.subplot(1, 3, 3)
+plt.imshow(img, cmap='gray')
+plt.title('Original')
+plt.axis('off')
+
+plt.show()
+"""
+
 
 
 print("\nAnalizando diferentes tamanos de ventana...")
