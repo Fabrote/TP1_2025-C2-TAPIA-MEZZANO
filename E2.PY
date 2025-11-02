@@ -36,6 +36,7 @@ def detectar_lineas(img):
     return pos_horizontales
 
 
+
 def detectar_columnas_por_fila(img, h_lines, fila_idx, min_altura_pct=0.7):
     """
     Detecta las lineas verticales dentro de una fila especifica.
@@ -55,7 +56,7 @@ def detectar_columnas_por_fila(img, h_lines, fila_idx, min_altura_pct=0.7):
     # Extraer solo esa fila
     y1 = h_lines[fila_idx]
     y2 = h_lines[fila_idx + 1]
-    fila = img[y1:y2, :]
+    fila = img[y1:y2, : ]
     altura_fila = y2 - y1
     
     # Umbralizar
@@ -66,6 +67,7 @@ def detectar_columnas_por_fila(img, h_lines, fila_idx, min_altura_pct=0.7):
     
     # Una linea vertical real debe tener pixeles en al menos min_altura_pct de la altura
     umbral_altura = altura_fila * min_altura_pct
+    
     
     # Detectar columnas que cumplan el criterio de altura
     lineas_v = altura_por_columna > umbral_altura
@@ -100,16 +102,9 @@ def encontrar_posiciones(mascara):
 
 
 
-
-
-
 # -------------------------------
 # PASO 3: EXTRAER Y CONTAR CARACTERES
 # -------------------------------
-
-
-
-
 
 
 def extraer_celda(img, h_lines, v_lines, fila_idx, col_idx):
@@ -242,16 +237,9 @@ def contar_palabras(celda):  ## funcion con mas problemas para encontrar . _, tu
     return num_palabras
 
 
-
-
-
-
 # -------------------------------
 # PASO 4: FUNCIONES DE VALIDACION
 # -------------------------------
-
-
-
 
 
 def validar_nombre_apellido(celda):
@@ -351,8 +339,6 @@ def validar_legajo(celda):
     
 
 
-
-
 def validar_pregunta(celda_si, celda_no):
     """
     En cada pregunta debe haber una única celda marcada 
@@ -395,8 +381,6 @@ def validar_comentarios(celda):
 #--------------------------------------------
 
 
-
-
 def detectar_tipo_formulario(path_img):
     """
     Detecta el tipo de formulario (A, B o C) a partir del encabezado superior derecho.
@@ -434,7 +418,6 @@ def detectar_tipo_formulario(path_img):
         tipo = "C"
     
     return tipo
-
 
 #----------------
 # PRUEBA COMPLETA
