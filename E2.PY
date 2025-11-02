@@ -2,7 +2,6 @@
 ### VALIDACION DE FORMULARIOS ###
 
 import cv2
-from cv2.typing import Prim
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -51,7 +50,7 @@ def detectar_columnas_por_fila(img, h_lines, fila_idx, min_altura_pct=0.7):
     Retorna: lista de posiciones de columnas en esa fila
     """
     if fila_idx >= len(h_lines) - 1:
-        return []
+        return [] # si la fila es la ultima, no hay columnas
     
     # Extraer solo esa fila
     y1 = h_lines[fila_idx]
@@ -506,7 +505,6 @@ img2 = r'C:\Users\Usuario\OneDrive\Documentos\TUIA\4to Cuatri\PDI\TP\formulario_
 img3 = r'C:\Users\Usuario\OneDrive\Documentos\TUIA\4to Cuatri\PDI\TP\formulario_03.png'
 img4 = r'C:\Users\Usuario\OneDrive\Documentos\TUIA\4to Cuatri\PDI\TP\formulario_04.png'
 img5 = r'C:\Users\Usuario\OneDrive\Documentos\TUIA\4to Cuatri\PDI\TP\formulario_05.png'
-
 
 
 #--------------------------------------------
