@@ -501,11 +501,11 @@ def validar_formulario(path):
     
 
 # Cargar formulario con datos
-img1 = r'D:\FABRO\TUIA\PROCESAMIENTO DE IMAGENES\TP1\formulario_01.png'
-img2 = r'D:\FABRO\TUIA\PROCESAMIENTO DE IMAGENES\TP1\formulario_02.png'
-img3 = r'D:\FABRO\TUIA\PROCESAMIENTO DE IMAGENES\TP1\formulario_03.png'
-img4 = r'D:\FABRO\TUIA\PROCESAMIENTO DE IMAGENES\TP1\formulario_04.png'
-img5 = r'D:\FABRO\TUIA\PROCESAMIENTO DE IMAGENES\TP1\formulario_05.png'
+img1 = r'C:\Users\Usuario\OneDrive\Documentos\TUIA\4to Cuatri\PDI\TP\formulario_01.png'
+img2 = r'C:\Users\Usuario\OneDrive\Documentos\TUIA\4to Cuatri\PDI\TP\formulario_02.png'
+img3 = r'C:\Users\Usuario\OneDrive\Documentos\TUIA\4to Cuatri\PDI\TP\formulario_03.png'
+img4 = r'C:\Users\Usuario\OneDrive\Documentos\TUIA\4to Cuatri\PDI\TP\formulario_04.png'
+img5 = r'C:\Users\Usuario\OneDrive\Documentos\TUIA\4to Cuatri\PDI\TP\formulario_05.png'
 
 
 
